@@ -37,6 +37,7 @@ html, body {
   max-width: 100%;
   margin: 0;
   position: relative;
+  overflow-x: hidden;
 }
 
 /* ===== SCREENS ===== */
@@ -145,6 +146,7 @@ html, body {
 /* ===== LEFT NAV ===== */
 #bottom-nav {
   position: static;
+  order: -1;
   width: var(--sidebar-w);
   height: 100dvh;
   background: color-mix(in srgb, var(--surface) 88%, transparent);
@@ -514,6 +516,11 @@ select option { background: var(--surface2); }
   color: var(--muted);
 }
 .checkbox-inline input { accent-color: var(--accent); }
+.two-col-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
 .templates-content #templates-list { display: flex; flex-direction: column; gap: 12px; }
 .template-item {
   background: var(--surface); border: 1px solid var(--border);
@@ -895,6 +902,137 @@ select option { background: var(--surface2); }
   background: color-mix(in srgb, var(--accent) 14%, transparent);
 }
 
+/* ===== RESPONSIVE – PHONE (< 768px) ===== */
+@media (max-width: 767px) {
+  :root {
+    --sidebar-w: 74px;
+  }
+
+  .topbar {
+    padding: 10px 12px;
+    gap: 8px;
+  }
+
+  .topbar h1 {
+    font-size: 16px;
+  }
+
+  .topbar-search-wrap {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  #bottom-nav {
+    width: var(--sidebar-w);
+    padding: 12px 8px;
+  }
+
+  .nav-brand-copy,
+  .nav-section-label,
+  .nav-btn .nav-label {
+    display: none;
+  }
+
+  .nav-brand {
+    justify-content: center;
+    padding: 8px 0 12px;
+  }
+
+  .nav-btn {
+    justify-content: center;
+    padding: 10px 8px;
+  }
+
+  .nav-btn .nav-icon {
+    width: auto;
+  }
+
+  .nav-admin-link {
+    text-align: center;
+    padding: 10px 8px;
+  }
+
+  .home-content,
+  .templates-content,
+  .template-editor,
+  .workout-content,
+  .stats-content,
+  .friends-content,
+  .settings-content,
+  .friend-profile-content {
+    padding: 12px;
+  }
+
+  .home-two-col,
+  .dashboard-stat-grid,
+  .auto-pill-grid,
+  .template-mode-tabs {
+    grid-template-columns: 1fr;
+  }
+
+  .template-item,
+  .friend-item,
+  .settings-row,
+  .pr-row,
+  .profile-header,
+  .share-code-box {
+    flex-wrap: wrap;
+  }
+
+  .share-code-box .code-text {
+    font-size: 15px;
+    letter-spacing: 1px;
+    word-break: break-all;
+  }
+
+  .modal-card,
+  .rest-timer-card {
+    max-width: 100%;
+    padding: 16px 14px 24px;
+  }
+
+  .modal-actions,
+  .rest-timer-controls,
+  .ex-block-footer,
+  .user-panel-actions {
+    flex-direction: column;
+  }
+
+  .modal-actions .btn,
+  .rest-timer-controls .btn,
+  .ex-block-footer .btn,
+  .user-panel-actions .btn {
+    width: 100%;
+  }
+
+  .sets-table th {
+    font-size: 10px;
+    padding: 6px 8px;
+  }
+
+  .sets-table td {
+    padding: 2px 2px 2px 8px;
+  }
+
+  .set-num {
+    padding-left: 8px;
+  }
+
+  .set-input {
+    width: 48px;
+    font-size: 14px;
+  }
+
+  .undo-toast {
+    max-width: calc(100vw - (var(--sidebar-w) + 20px));
+    white-space: normal;
+  }
+
+  .two-col-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* ===== RESPONSIVE – TABLET / DESKTOP (≥ 768px) ===== */
 @media (min-width: 768px) {
   :root {
@@ -1041,4 +1179,49 @@ body {
 .nav-btn.active {
   color: var(--accent);
   text-shadow: 0 0 12px rgba(255,91,71,.35);
+}
+
+.settings-inline-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+.settings-inline-controls select,
+.settings-inline-controls input[type="time"] {
+  min-width: 96px;
+}
+
+body[data-theme="classic"] {
+  background-image: none;
+  background-color: #0f0f0f;
+}
+body[data-theme="classic"] {
+  --bg: #0f0f0f;
+  --surface: #1a1a1a;
+  --surface2: #242424;
+  --border: #2e2e2e;
+  --text: #f0f0f0;
+  --muted: #9a9a9a;
+}
+
+body[data-accent="red"]    { --accent: #ff5b47; --accent2: #ff9a3d; }
+body[data-accent="blue"]   { --accent: #4ea1ff; --accent2: #4fd4ff; }
+body[data-accent="green"]  { --accent: #66d66e; --accent2: #9be15d; }
+body[data-accent="purple"] { --accent: #a57cff; --accent2: #dd7cff; }
+
+body[data-density="compact"] .topbar,
+body[data-density="compact"] .settings-row,
+body[data-density="compact"] .template-item,
+body[data-density="compact"] .friend-item,
+body[data-density="compact"] .recent-item {
+  padding-top: 9px;
+  padding-bottom: 9px;
+}
+
+@media (max-width: 767px) {
+  .settings-inline-controls {
+    width: 100%;
+    justify-content: flex-start;
+  }
 }
