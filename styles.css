@@ -37,6 +37,7 @@ html, body {
   max-width: 100%;
   margin: 0;
   position: relative;
+  overflow: hidden;
 }
 
 /* ===== SCREENS ===== */
@@ -145,6 +146,7 @@ html, body {
 /* ===== LEFT NAV ===== */
 #bottom-nav {
   position: static;
+  order: -1;
   width: var(--sidebar-w);
   height: 100dvh;
   background: color-mix(in srgb, var(--surface) 88%, transparent);
@@ -893,6 +895,43 @@ select option { background: var(--surface2); }
   color: var(--text);
   border-color: var(--accent);
   background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+
+/* ===== RESPONSIVE – PHONE (< 768px) ===== */
+@media (max-width: 767px) {
+  :root {
+    --sidebar-w: 74px;
+  }
+
+  #bottom-nav {
+    width: var(--sidebar-w);
+    padding: 12px 8px;
+  }
+
+  .nav-brand-copy,
+  .nav-section-label,
+  .nav-btn .nav-label {
+    display: none;
+  }
+
+  .nav-brand {
+    justify-content: center;
+    padding: 8px 0 12px;
+  }
+
+  .nav-btn {
+    justify-content: center;
+    padding: 10px 8px;
+  }
+
+  .nav-btn .nav-icon {
+    width: auto;
+  }
+
+  .nav-admin-link {
+    text-align: center;
+    padding: 10px 8px;
+  }
 }
 
 /* ===== RESPONSIVE – TABLET / DESKTOP (≥ 768px) ===== */
