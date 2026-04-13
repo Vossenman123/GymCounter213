@@ -779,7 +779,7 @@ select option { background: var(--surface2); }
   transition: transform .15s ease, text-shadow .2s ease, color .2s ease;
 }
 .settings-timer-display.running {
-  animation: timerPulse .9s ease-in-out infinite;
+  animation: timerPulse 1.2s ease-in-out infinite;
 }
 .settings-timer-display.paused {
   color: var(--muted);
@@ -852,7 +852,10 @@ select option { background: var(--surface2); }
 @keyframes slideUp { from { transform: translateY(16px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .5; } }
 @keyframes screenIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-@keyframes timerPulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.03); } }
+@keyframes timerPulse {
+  0%,100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.015); opacity: .92; }
+}
 .animate-in { animation: slideUp .2s ease both; }
 .pulsing { animation: pulse 1.2s ease infinite; }
 
@@ -1263,6 +1266,9 @@ body[data-density="compact"] .recent-item {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .settings-timer-display.running {
+    animation: none !important;
+  }
   *, *::before, *::after {
     animation-duration: 0s !important;
     animation-iteration-count: 1 !important;

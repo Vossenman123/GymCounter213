@@ -865,9 +865,19 @@ document.getElementById('rest-skip').addEventListener('click', () => {
 });
 
 /* ── SETTINGS TIMER TOOLS ────────────────────────────────────────────── */
+let utilityTimerAudioCtx = null;
+
+function getUtilityTimerAudioCtx() {
+  if (!utilityTimerAudioCtx || utilityTimerAudioCtx.state === 'closed') {
+    utilityTimerAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  return utilityTimerAudioCtx;
+}
+
 function playTimerBeep() {
   try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const ctx = getUtilityTimerAudioCtx();
+    if (ctx.state === 'suspended') ctx.resume().catch(() => {});
     const o = ctx.createOscillator();
     const g = ctx.createGain();
     o.connect(g);
