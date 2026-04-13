@@ -516,6 +516,7 @@ select option { background: var(--surface2); }
   color: var(--muted);
 }
 .checkbox-inline input { accent-color: var(--accent); }
+.two-col-grid { grid-template-columns: 1fr 1fr; }
 .templates-content #templates-list { display: flex; flex-direction: column; gap: 12px; }
 .template-item {
   background: var(--surface); border: 1px solid var(--border);
@@ -1023,7 +1024,7 @@ select option { background: var(--surface2); }
     white-space: normal;
   }
 
-  [style*="grid-template-columns:1fr 1fr"] {
+  .two-col-grid {
     grid-template-columns: 1fr !important;
   }
 }
