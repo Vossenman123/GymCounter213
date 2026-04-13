@@ -530,6 +530,17 @@ let restSeconds = 0;
 let restTotal   = 0;
 let undoStack   = [];
 let undoTimer   = null;
+let utilityTimerInterval = null;
+let utilityTimerState = {
+  mode: 'idle',
+  remaining: 0,
+  elapsed: 0,
+  total: 0,
+  running: false,
+  phase: '',
+  cycle: 0,
+  cycles: 0
+};
 
 function startWorkout(templateId) {
   const tpl = DB.templates.find(t=>t.id===templateId);
@@ -852,6 +863,179 @@ document.getElementById('rest-skip').addEventListener('click', () => {
   clearRestTimer();
   document.getElementById('rest-timer-overlay').classList.remove('show');
 });
+
+/* ── SETTINGS TIMER TOOLS ────────────────────────────────────────────── */
+function playTimerBeep() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.connect(g);
+    g.connect(ctx.destination);
+    o.frequency.value = 880;
+    g.gain.setValueAtTime(0.25, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+    o.start();
+    o.stop(ctx.currentTime + 0.3);
+  } catch (e) {}
+}
+
+function renderUtilityTimerDisplay() {
+  const display = document.getElementById('settings-timer-display');
+  const mode = document.getElementById('settings-timer-mode');
+  if (!display || !mode) return;
+  const seconds = utilityTimerState.mode === 'stopwatch' ? utilityTimerState.elapsed : Math.max(0, utilityTimerState.remaining);
+  display.textContent = fmtDur(seconds || 0);
+  if (utilityTimerState.mode === 'idle') {
+    mode.textContent = 'Ready';
+    return;
+  }
+  const status = utilityTimerState.running ? 'Running' : 'Paused';
+  mode.textContent = utilityTimerState.phase ? `${utilityTimerState.phase} · ${status}` : status;
+}
+
+function resetUtilityTimerState() {
+  clearInterval(utilityTimerInterval);
+  utilityTimerInterval = null;
+  utilityTimerState = {
+    mode: 'idle',
+    remaining: 0,
+    elapsed: 0,
+    total: 0,
+    running: false,
+    phase: '',
+    cycle: 0,
+    cycles: 0
+  };
+}
+
+function stopUtilityTimer(showMessage = false) {
+  resetUtilityTimerState();
+  renderUtilityTimerDisplay();
+  if (showMessage) showToast('Timer stopped.');
+}
+
+function startStopwatchTimer() {
+  resetUtilityTimerState();
+  utilityTimerState.mode = 'stopwatch';
+  utilityTimerState.running = true;
+  utilityTimerState.phase = 'Stopwatch';
+  renderUtilityTimerDisplay();
+  utilityTimerInterval = setInterval(() => {
+    if (!utilityTimerState.running) return;
+    utilityTimerState.elapsed++;
+    renderUtilityTimerDisplay();
+  }, 1000);
+  showToast('Stopwatch started.');
+}
+
+function startCountdownTimer(seconds = 300) {
+  resetUtilityTimerState();
+  utilityTimerState.mode = 'countdown';
+  utilityTimerState.remaining = Math.max(1, seconds | 0);
+  utilityTimerState.total = utilityTimerState.remaining;
+  utilityTimerState.running = true;
+  utilityTimerState.phase = 'Countdown';
+  renderUtilityTimerDisplay();
+  utilityTimerInterval = setInterval(() => {
+    if (!utilityTimerState.running) return;
+    utilityTimerState.remaining--;
+    renderUtilityTimerDisplay();
+    if (utilityTimerState.remaining <= 0) {
+      playTimerBeep();
+      stopUtilityTimer();
+      showToast('Countdown complete!');
+    }
+  }, 1000);
+  showToast('5 minute countdown started.');
+}
+
+function startIntervalTimer(workSeconds = 45, restSeconds = 15, cycles = 8) {
+  resetUtilityTimerState();
+  const safeWork = Math.max(1, workSeconds | 0);
+  const safeRest = Math.max(1, restSeconds | 0);
+  const safeCycles = Math.max(1, cycles | 0);
+  utilityTimerState.mode = 'interval';
+  utilityTimerState.running = true;
+  utilityTimerState.cycle = 1;
+  utilityTimerState.cycles = safeCycles;
+  utilityTimerState.phase = `Work ${utilityTimerState.cycle}/${utilityTimerState.cycles}`;
+  utilityTimerState.remaining = safeWork;
+  renderUtilityTimerDisplay();
+  utilityTimerInterval = setInterval(() => {
+    if (!utilityTimerState.running) return;
+    utilityTimerState.remaining--;
+    if (utilityTimerState.remaining <= 0) {
+      playTimerBeep();
+      if (utilityTimerState.phase.startsWith('Work')) {
+        utilityTimerState.phase = `Rest ${utilityTimerState.cycle}/${utilityTimerState.cycles}`;
+        utilityTimerState.remaining = safeRest;
+      } else if (utilityTimerState.cycle < utilityTimerState.cycles) {
+        utilityTimerState.cycle++;
+        utilityTimerState.phase = `Work ${utilityTimerState.cycle}/${utilityTimerState.cycles}`;
+        utilityTimerState.remaining = safeWork;
+      } else {
+        stopUtilityTimer();
+        showToast('Intervals complete!');
+        return;
+      }
+    }
+    renderUtilityTimerDisplay();
+  }, 1000);
+  showToast('Interval timer started (45s work / 15s rest).');
+}
+
+function startTabataTimer() {
+  startIntervalTimer(20, 10, 8);
+  utilityTimerState.mode = 'tabata';
+  showToast('Tabata started (8 rounds).');
+}
+
+function startEmomTimer(minutes = 10) {
+  resetUtilityTimerState();
+  const safeMinutes = Math.max(1, minutes | 0);
+  utilityTimerState.mode = 'emom';
+  utilityTimerState.running = true;
+  utilityTimerState.total = safeMinutes * 60;
+  utilityTimerState.remaining = utilityTimerState.total;
+  utilityTimerState.cycle = 1;
+  utilityTimerState.cycles = safeMinutes;
+  utilityTimerState.phase = `Minute 1/${safeMinutes}`;
+  renderUtilityTimerDisplay();
+  utilityTimerInterval = setInterval(() => {
+    if (!utilityTimerState.running) return;
+    utilityTimerState.remaining--;
+    if (utilityTimerState.remaining <= 0) {
+      playTimerBeep();
+      stopUtilityTimer();
+      showToast('EMOM complete!');
+      return;
+    }
+    const elapsed = utilityTimerState.total - utilityTimerState.remaining;
+    const nextMinute = Math.floor(elapsed / 60) + 1;
+    if (nextMinute !== utilityTimerState.cycle && nextMinute <= safeMinutes) {
+      utilityTimerState.cycle = nextMinute;
+      utilityTimerState.phase = `Minute ${nextMinute}/${safeMinutes}`;
+      playTimerBeep();
+    }
+    renderUtilityTimerDisplay();
+  }, 1000);
+  showToast('EMOM started (10 minutes).');
+}
+
+function pauseUtilityTimer() {
+  if (!utilityTimerState.running || utilityTimerState.mode === 'idle') return;
+  utilityTimerState.running = false;
+  renderUtilityTimerDisplay();
+  showToast('Timer paused.');
+}
+
+function resumeUtilityTimer() {
+  if (utilityTimerState.mode === 'idle' || utilityTimerState.running) return;
+  utilityTimerState.running = true;
+  renderUtilityTimerDisplay();
+  showToast('Timer resumed.');
+}
 
 /* ── PR DETECTION ───────────────────────────────────────────────────── */
 function checkAndSavePR(ex, workoutId, date) {
@@ -1601,6 +1785,7 @@ function renderSettings() {
   document.getElementById('settings-focus-mode-select').value = DB.settings.focusMode;
   document.getElementById('settings-reminder-enabled-select').value = DB.settings.reminders.enabled ? 'on' : 'off';
   document.getElementById('settings-reminder-time').value = DB.settings.reminders.time;
+  renderUtilityTimerDisplay();
   updateConnectivityIndicators();
   renderSharedExercises();
   renderSnapshotSelect();
@@ -1680,6 +1865,30 @@ document.getElementById('btn-userpanel-add-exercise').addEventListener('click', 
 });
 document.getElementById('btn-userpanel-export').addEventListener('click', () => {
   document.getElementById('btn-export-json').click();
+});
+document.getElementById('btn-timer-stopwatch')?.addEventListener('click', () => {
+  startStopwatchTimer();
+});
+document.getElementById('btn-timer-countdown')?.addEventListener('click', () => {
+  startCountdownTimer(300);
+});
+document.getElementById('btn-timer-interval')?.addEventListener('click', () => {
+  startIntervalTimer(45, 15, 8);
+});
+document.getElementById('btn-timer-tabata')?.addEventListener('click', () => {
+  startTabataTimer();
+});
+document.getElementById('btn-timer-emom')?.addEventListener('click', () => {
+  startEmomTimer(10);
+});
+document.getElementById('btn-timer-pause')?.addEventListener('click', () => {
+  pauseUtilityTimer();
+});
+document.getElementById('btn-timer-resume')?.addEventListener('click', () => {
+  resumeUtilityTimer();
+});
+document.getElementById('btn-timer-stop')?.addEventListener('click', () => {
+  stopUtilityTimer(true);
 });
 
 function renderSharedExercises() {
