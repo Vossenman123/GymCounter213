@@ -6,6 +6,7 @@
 
 /* ── CONSTANTS ─────────────────────────────────────────────────────── */
 const STORE_KEY  = 'gymlog_v1';
+const SNAP_KEY   = 'gymlog_v1_snapshots';
 const EPLEY     = (w, r) => r === 1 ? w : w * (1 + r / 30);   // e1RM formula
 /*
  * type: 'weight' = uses weight (kg/lb) + reps  (default)
@@ -89,7 +90,11 @@ function defaultDB() {
       userId: uid(),
       privacy:'friends',
       sharedExercises:[],
-      motivation: defaultMotivation()
+      motivation: defaultMotivation(),
+      appearance: { theme:'neon', accent:'red', density:'comfortable', fontScale:1 },
+      startScreen: 'screen-home',
+      focusMode: 'off',
+      reminders: { enabled: false, time: '18:00' }
     },
     exercises: JSON.parse(JSON.stringify(BUILT_IN_EXERCISES)),
     templates: [],
@@ -138,11 +143,31 @@ mergeExerciseDefaults(); // ensure existing saved exercises have desc/type
 
 function ensureDBDefaults() {
   if (!DB.settings) DB.settings = {};
+  if (!['kg','lb'].includes(DB.settings.unit)) DB.settings.unit = 'kg';
+  if (typeof DB.settings.username !== 'string') DB.settings.username = '';
+  if (!DB.settings.userId) DB.settings.userId = uid();
+  if (!['none','friends','link'].includes(DB.settings.privacy)) DB.settings.privacy = 'friends';
+  if (!Array.isArray(DB.settings.sharedExercises)) DB.settings.sharedExercises = [];
   if (!DB.settings.motivation) DB.settings.motivation = defaultMotivation();
   if (!DB.settings.autoTemplateProfile) DB.settings.autoTemplateProfile = defaultAutoTemplateProfile();
+  if (!DB.settings.appearance || typeof DB.settings.appearance !== 'object') DB.settings.appearance = {};
+  if (!['neon','classic'].includes(DB.settings.appearance.theme)) DB.settings.appearance.theme = 'neon';
+  if (!['red','blue','green','purple'].includes(DB.settings.appearance.accent)) DB.settings.appearance.accent = 'red';
+  if (!['comfortable','compact'].includes(DB.settings.appearance.density)) DB.settings.appearance.density = 'comfortable';
+  if (![0.9,1,1.1,1.2].includes(Number(DB.settings.appearance.fontScale))) DB.settings.appearance.fontScale = 1;
+  if (!['off','on'].includes(DB.settings.focusMode)) DB.settings.focusMode = 'off';
+  if (!DB.settings.reminders || typeof DB.settings.reminders !== 'object') DB.settings.reminders = {};
+  DB.settings.reminders.enabled = !!DB.settings.reminders.enabled;
+  if (!/^\d{2}:\d{2}$/.test(String(DB.settings.reminders.time || ''))) DB.settings.reminders.time = '18:00';
+  DB.settings.startScreen = normalizeStartScreen(DB.settings.startScreen);
   if (!Array.isArray(DB.settings.motivation.earned)) DB.settings.motivation.earned = [];
   if (!DB.settings.motivation.baseline) DB.settings.motivation.baseline = { workouts: 0, volume: 0, prs: 0 };
   if (!DB.settings.motivation.startedAt) DB.settings.motivation.startedAt = new Date().toISOString();
+}
+
+function normalizeStartScreen(screen) {
+  const valid = new Set(['screen-home','screen-templates','screen-friends','screen-achievements','screen-settings']);
+  return valid.has(screen) ? screen : 'screen-home';
 }
 
 /* ── TYPE HELPERS ──────────────────────────────────────────────────── */
@@ -190,6 +215,24 @@ const nav     = document.getElementById('bottom-nav');
 const navBtns = document.querySelectorAll('.nav-btn');
 let currentScreen = '';
 
+function applyAppearanceSettings() {
+  const appearance = DB.settings.appearance || {};
+  document.body.dataset.theme = appearance.theme || 'neon';
+  document.body.dataset.accent = appearance.accent || 'red';
+  document.body.dataset.density = appearance.density || 'comfortable';
+  document.documentElement.style.fontSize = (Number(appearance.fontScale) || 1) * 15 + 'px';
+}
+
+function applyFocusMode() {
+  const hideFriends = DB.settings.focusMode === 'on';
+  const friendsBtn = document.querySelector('.nav-btn[data-screen="screen-friends"]');
+  if (friendsBtn) friendsBtn.classList.toggle('hidden', hideFriends);
+  if (hideFriends && currentScreen === 'screen-friends') {
+    renderHome();
+    showScreen('screen-home');
+  }
+}
+
 function showScreen(id, noNav = false) {
   screens.forEach(s => s.classList.toggle('active', s.id === id));
   currentScreen = id;
@@ -199,21 +242,25 @@ function showScreen(id, noNav = false) {
   window.scrollTo(0, 0);
 }
 
+function openMainScreen(id) {
+  const target = id === 'screen-friends' && DB.settings.focusMode === 'on' ? 'screen-home' : id;
+  if (target === 'screen-home') renderHome();
+  if (target === 'screen-templates') renderTemplates();
+  if (target === 'screen-friends') renderFriends();
+  if (target === 'screen-achievements') renderAchievements();
+  if (target === 'screen-settings') renderSettings();
+  showScreen(target);
+}
+
 navBtns.forEach(b => b.addEventListener('click', () => {
-  const s = b.dataset.screen;
-  if (s === 'screen-home') renderHome();
-  if (s === 'screen-templates') renderTemplates();
-  if (s === 'screen-friends') renderFriends();
-  if (s === 'screen-achievements') renderAchievements();
-  if (s === 'screen-settings') renderSettings();
-  showScreen(s);
+  openMainScreen(b.dataset.screen);
 }));
 
 /* ── ONBOARDING ─────────────────────────────────────────────────────── */
 let onboardStep = 0;
 
 function initOnboarding() {
-  if (DB.onboarded) { renderHome(); showScreen('screen-home'); return; }
+  if (DB.onboarded) { openMainScreen(normalizeStartScreen(DB.settings.startScreen)); return; }
   showScreen('screen-onboarding', true);
   goOnboardStep(0);
 }
@@ -1546,8 +1593,17 @@ function renderSettings() {
   document.getElementById('settings-username').textContent = username;
   document.getElementById('settings-unit-select').value = DB.settings.unit;
   document.getElementById('settings-privacy-select').value = DB.settings.privacy;
+  document.getElementById('settings-theme-select').value = DB.settings.appearance.theme;
+  document.getElementById('settings-accent-select').value = DB.settings.appearance.accent;
+  document.getElementById('settings-density-select').value = DB.settings.appearance.density;
+  document.getElementById('settings-font-scale-select').value = String(DB.settings.appearance.fontScale);
+  document.getElementById('settings-start-screen-select').value = normalizeStartScreen(DB.settings.startScreen);
+  document.getElementById('settings-focus-mode-select').value = DB.settings.focusMode;
+  document.getElementById('settings-reminder-enabled-select').value = DB.settings.reminders.enabled ? 'on' : 'off';
+  document.getElementById('settings-reminder-time').value = DB.settings.reminders.time;
   updateConnectivityIndicators();
   renderSharedExercises();
+  renderSnapshotSelect();
   document.getElementById('settings-userpanel-name').textContent = username;
   document.getElementById('settings-userpanel-id').textContent = 'ID ' + String(DB.settings.userId || 'LOCAL').slice(0,8).toUpperCase();
   document.getElementById('settings-userpanel-workouts').textContent = `${DB.workouts.length} workout${DB.workouts.length !== 1 ? 's' : ''}`;
@@ -1582,6 +1638,37 @@ document.getElementById('settings-unit-select').addEventListener('change', e => 
 document.getElementById('settings-privacy-select').addEventListener('change', e => {
   DB.settings.privacy = e.target.value; saveDB();
 });
+document.getElementById('settings-theme-select').addEventListener('change', e => {
+  DB.settings.appearance.theme = e.target.value; saveDB(); applyAppearanceSettings();
+});
+document.getElementById('settings-accent-select').addEventListener('change', e => {
+  DB.settings.appearance.accent = e.target.value; saveDB(); applyAppearanceSettings();
+});
+document.getElementById('settings-density-select').addEventListener('change', e => {
+  DB.settings.appearance.density = e.target.value; saveDB(); applyAppearanceSettings();
+});
+document.getElementById('settings-font-scale-select').addEventListener('change', e => {
+  DB.settings.appearance.fontScale = Number(e.target.value) || 1; saveDB(); applyAppearanceSettings();
+});
+document.getElementById('settings-start-screen-select').addEventListener('change', e => {
+  DB.settings.startScreen = normalizeStartScreen(e.target.value); saveDB();
+});
+document.getElementById('settings-focus-mode-select').addEventListener('change', e => {
+  DB.settings.focusMode = e.target.value; saveDB(); applyFocusMode();
+});
+document.getElementById('settings-reminder-enabled-select').addEventListener('change', e => {
+  DB.settings.reminders.enabled = e.target.value === 'on'; saveDB();
+});
+document.getElementById('settings-reminder-time').addEventListener('change', e => {
+  DB.settings.reminders.time = e.target.value || '18:00'; saveDB();
+});
+document.getElementById('btn-test-reminder').addEventListener('click', async () => {
+  if (!('Notification' in window)) { showToast('Notifications are not supported here.'); return; }
+  if (Notification.permission === 'default') await Notification.requestPermission();
+  if (Notification.permission !== 'granted') { showToast('Notification permission denied.'); return; }
+  new Notification('Gym Progress Reminder', { body: `Time to train 💪 (${DB.settings.reminders.time})` });
+  showToast('Reminder notification sent.');
+});
 document.getElementById('btn-change-name').addEventListener('click', () => {
   openEditNameModal();
 });
@@ -1614,6 +1701,136 @@ function toggleSharedEx(id, checked) {
   else { DB.settings.sharedExercises = DB.settings.sharedExercises.filter(x=>x!==id); }
   saveDB();
 }
+
+function loadSnapshots() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(SNAP_KEY) || '[]');
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+function saveSnapshots(snaps) {
+  localStorage.setItem(SNAP_KEY, JSON.stringify(snaps));
+}
+function renderSnapshotSelect() {
+  const sel = document.getElementById('settings-snapshot-select');
+  const snaps = loadSnapshots();
+  if (!snaps.length) {
+    sel.innerHTML = '<option value="">No snapshots</option>';
+    return;
+  }
+  sel.innerHTML = snaps
+    .sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt))
+    .map(s => `<option value="${s.id}">${new Date(s.createdAt).toLocaleString()} (${(s.label || 'Snapshot')})</option>`)
+    .join('');
+}
+
+document.getElementById('btn-save-snapshot').addEventListener('click', () => {
+  const snaps = loadSnapshots();
+  snaps.unshift({
+    id: uid(),
+    label: DB.settings.username || 'Athlete',
+    createdAt: new Date().toISOString(),
+    data: JSON.stringify(DB)
+  });
+  saveSnapshots(snaps.slice(0, 8));
+  renderSnapshotSelect();
+  showToast('Snapshot saved.');
+});
+document.getElementById('btn-load-snapshot').addEventListener('click', () => {
+  const id = document.getElementById('settings-snapshot-select').value;
+  const snap = loadSnapshots().find(s => s.id === id);
+  if (!snap) { showToast('Choose a snapshot first.'); return; }
+  openConfirmDialog({
+    title: 'Load snapshot',
+    message: 'This will replace your current local data with the selected snapshot.',
+    confirmText: 'Load snapshot',
+    onConfirm: () => {
+      try {
+        DB = JSON.parse(snap.data);
+        ensureDBDefaults();
+        mergeExerciseDefaults();
+        saveDB();
+        applyAppearanceSettings();
+        applyFocusMode();
+        renderHome(); renderTemplates(); renderFriends(); renderAchievements(); renderSettings();
+        showScreen('screen-home');
+        showToast('Snapshot loaded.');
+      } catch {
+        showToast('Snapshot is invalid.');
+      }
+    }
+  });
+});
+document.getElementById('btn-delete-snapshot').addEventListener('click', () => {
+  const id = document.getElementById('settings-snapshot-select').value;
+  if (!id) return;
+  saveSnapshots(loadSnapshots().filter(s => s.id !== id));
+  renderSnapshotSelect();
+  showToast('Snapshot deleted.');
+});
+
+document.getElementById('btn-import-json').addEventListener('click', () => {
+  document.getElementById('settings-import-json-file').click();
+});
+document.getElementById('settings-import-json-file').addEventListener('change', async e => {
+  const file = e.target.files?.[0];
+  if (!file) return;
+  try {
+    const txt = await file.text();
+    const parsed = JSON.parse(txt);
+    if (!parsed || typeof parsed !== 'object') throw new Error('Invalid');
+    DB = parsed;
+    ensureDBDefaults();
+    mergeExerciseDefaults();
+    saveDB();
+    applyAppearanceSettings();
+    applyFocusMode();
+    renderHome(); renderTemplates(); renderFriends(); renderAchievements(); renderSettings();
+    showScreen('screen-home');
+    showToast('Backup imported.');
+  } catch {
+    showToast('Import failed. Invalid JSON backup.');
+  } finally {
+    e.target.value = '';
+  }
+});
+
+function runDataDiagnostics() {
+  const issues = [];
+  if (!Array.isArray(DB.workouts)) issues.push('Workouts list missing');
+  if (!Array.isArray(DB.templates)) issues.push('Templates list missing');
+  if (!Array.isArray(DB.exercises)) issues.push('Exercises list missing');
+  if (!Array.isArray(DB.settings.sharedExercises)) issues.push('Shared exercises invalid');
+  if (!DB.settings.userId) issues.push('User ID missing');
+  return issues;
+}
+
+function quickRepairData() {
+  ensureDBDefaults();
+  if (!Array.isArray(DB.workouts)) DB.workouts = [];
+  if (!Array.isArray(DB.templates)) DB.templates = [];
+  if (!Array.isArray(DB.exercises)) DB.exercises = JSON.parse(JSON.stringify(BUILT_IN_EXERCISES));
+  if (!DB.prs || typeof DB.prs !== 'object') DB.prs = {};
+  mergeExerciseDefaults();
+  saveDB();
+}
+
+document.getElementById('btn-data-diagnostics').addEventListener('click', () => {
+  const issues = runDataDiagnostics();
+  const el = document.getElementById('settings-data-health-status');
+  if (!issues.length) {
+    el.textContent = `Healthy ✅ (${DB.workouts.length} workouts, ${DB.templates.length} templates)`;
+  } else {
+    el.textContent = 'Issues: ' + issues.join(', ');
+  }
+});
+document.getElementById('btn-data-repair').addEventListener('click', () => {
+  quickRepairData();
+  renderSettings();
+  showToast('Quick repair completed.');
+});
 
 /* Export */
 document.getElementById('btn-export-json').addEventListener('click', () => {
@@ -1910,6 +2127,8 @@ document.getElementById('btn-logout')?.addEventListener('click', async () => {
 /** Called once auth is confirmed (token found or offline chosen). Shows the app. */
 function startApp() {
   document.getElementById('bottom-nav').style.display = '';
+  applyAppearanceSettings();
+  applyFocusMode();
   updateConnectivityIndicators();
   initOnboarding(); // this will show home or onboarding
 }
