@@ -885,7 +885,7 @@ function renderUtilityTimerDisplay() {
   const mode = document.getElementById('settings-timer-mode');
   if (!display || !mode) return;
   const seconds = utilityTimerState.mode === 'stopwatch' ? utilityTimerState.elapsed : Math.max(0, utilityTimerState.remaining);
-  display.textContent = fmtDur(seconds || 0);
+  display.textContent = fmtDur(seconds);
   if (utilityTimerState.mode === 'idle') {
     mode.textContent = 'Ready';
     return;
@@ -931,8 +931,9 @@ function startStopwatchTimer() {
 
 function startCountdownTimer(seconds = 300) {
   resetUtilityTimerState();
+  const safeSeconds = Math.max(1, Number.parseInt(seconds, 10) || 0);
   utilityTimerState.mode = 'countdown';
-  utilityTimerState.remaining = Math.max(1, seconds | 0);
+  utilityTimerState.remaining = safeSeconds;
   utilityTimerState.total = utilityTimerState.remaining;
   utilityTimerState.running = true;
   utilityTimerState.phase = 'Countdown';
@@ -952,9 +953,9 @@ function startCountdownTimer(seconds = 300) {
 
 function startIntervalTimer(workSeconds = 45, restSeconds = 15, cycles = 8) {
   resetUtilityTimerState();
-  const safeWork = Math.max(1, workSeconds | 0);
-  const safeRest = Math.max(1, restSeconds | 0);
-  const safeCycles = Math.max(1, cycles | 0);
+  const safeWork = Math.max(1, Number.parseInt(workSeconds, 10) || 0);
+  const safeRest = Math.max(1, Number.parseInt(restSeconds, 10) || 0);
+  const safeCycles = Math.max(1, Number.parseInt(cycles, 10) || 0);
   utilityTimerState.mode = 'interval';
   utilityTimerState.running = true;
   utilityTimerState.cycle = 1;
@@ -993,7 +994,7 @@ function startTabataTimer() {
 
 function startEmomTimer(minutes = 10) {
   resetUtilityTimerState();
-  const safeMinutes = Math.max(1, minutes | 0);
+  const safeMinutes = Math.max(1, Number.parseInt(minutes, 10) || 0);
   utilityTimerState.mode = 'emom';
   utilityTimerState.running = true;
   utilityTimerState.total = safeMinutes * 60;
