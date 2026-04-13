@@ -886,6 +886,8 @@ function renderUtilityTimerDisplay() {
   if (!display || !mode) return;
   const seconds = utilityTimerState.mode === 'stopwatch' ? utilityTimerState.elapsed : Math.max(0, utilityTimerState.remaining);
   display.textContent = fmtDur(seconds);
+  display.classList.toggle('running', utilityTimerState.running && utilityTimerState.mode !== 'idle');
+  display.classList.toggle('paused', !utilityTimerState.running && utilityTimerState.mode !== 'idle');
   if (utilityTimerState.mode === 'idle') {
     mode.textContent = 'Ready';
     return;

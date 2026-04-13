@@ -42,7 +42,7 @@ html, body {
 
 /* ===== SCREENS ===== */
 .screen { display: none; flex-direction: column; flex: 1; overflow-y: auto; padding-bottom: 0; min-width: 0; }
-.screen.active { display: flex; }
+.screen.active { display: flex; animation: screenIn .22s ease-out both; }
 .screen-onboarding { padding-bottom: 0; }
 
 /* ── Auth screens ─────────────────────────────────────────────────── */
@@ -749,6 +749,13 @@ select option { background: var(--surface2); }
 .settings-row {
   background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm);
   padding: 13px 16px; display: flex; align-items: center; gap: 10px;
+  transition: transform .15s ease, border-color .2s ease, background-color .2s ease, box-shadow .2s ease;
+}
+.settings-row:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
+  background: color-mix(in srgb, var(--surface) 90%, #ffffff 10%);
+  box-shadow: 0 8px 20px rgba(0,0,0,.22);
 }
 .settings-row .sr-icon { font-size: 20px; }
 .settings-row .sr-info { flex: 1; }
@@ -759,14 +766,24 @@ select option { background: var(--surface2); }
   align-items: center;
 }
 .settings-timer-display {
-  min-width: 84px;
+  min-width: 132px;
   text-align: right;
-  font-size: 24px;
+  font-size: clamp(30px, 2.6vw, 40px);
   font-weight: 800;
   color: var(--accent);
-  letter-spacing: 0.5px;
+  letter-spacing: 0.7px;
+  line-height: 1;
   font-variant-numeric: tabular-nums;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  text-shadow: 0 0 12px color-mix(in srgb, var(--accent) 35%, transparent);
+  transition: transform .15s ease, text-shadow .2s ease, color .2s ease;
+}
+.settings-timer-display.running {
+  animation: timerPulse .9s ease-in-out infinite;
+}
+.settings-timer-display.paused {
+  color: var(--muted);
+  text-shadow: none;
 }
 .settings-row select {
   background: transparent; border: none; color: var(--accent); font-weight: 700;
@@ -834,6 +851,8 @@ select option { background: var(--surface2); }
 /* ===== ANIMATIONS ===== */
 @keyframes slideUp { from { transform: translateY(16px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .5; } }
+@keyframes screenIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes timerPulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.03); } }
 .animate-in { animation: slideUp .2s ease both; }
 .pulsing { animation: pulse 1.2s ease infinite; }
 
@@ -1239,5 +1258,15 @@ body[data-density="compact"] .recent-item {
   }
   .settings-timer-display {
     text-align: left;
+    min-width: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

@@ -25,12 +25,13 @@ const API_CONFIG = {
   token: null,
   /** Firebase project config (Web App config from Firebase console) */
   firebase: {
-    apiKey: '',
-    authDomain: '',
-    projectId: '',
-    appId: '',
-    storageBucket: '',
-    messagingSenderId: '',
+    apiKey: 'AIzaSyAhHOIS0_JU6LOuN1TJMcN2KAOdR3nDYDE',
+    authDomain: 'gymcounter-26bbc.firebaseapp.com',
+    projectId: 'gymcounter-26bbc',
+    appId: '1:771510950076:web:116556dc2c1f7b3d42d8b9',
+    storageBucket: 'gymcounter-26bbc.firebasestorage.app',
+    messagingSenderId: '771510950076',
+    measurementId: 'G-4V7FP27GBJ',
   },
 };
 
@@ -89,16 +90,9 @@ function _loadApiConfig() {
   if (storedFirebaseCfg) {
     try {
       const parsed = JSON.parse(storedFirebaseCfg);
-      API_CONFIG.firebase = { const firebaseConfig = {
-  apiKey: "AIzaSyAhHOIS0_JU6LOuN1TJMcN2KAOdR3nDYDE",
-  authDomain: "gymcounter-26bbc.firebaseapp.com",
-  projectId: "gymcounter-26bbc",
-  storageBucket: "gymcounter-26bbc.firebasestorage.app",
-  messagingSenderId: "771510950076",
-  appId: "1:771510950076:web:116556dc2c1f7b3d42d8b9",
-  measurementId: "G-4V7FP27GBJ"
-};
-(parsed || {}) };
+      if (parsed && typeof parsed === 'object') {
+        API_CONFIG.firebase = { ...API_CONFIG.firebase, ...parsed };
+      }
     } catch (_) {}
   }
 }
