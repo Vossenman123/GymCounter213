@@ -37,7 +37,7 @@ html, body {
   max-width: 100%;
   margin: 0;
   position: relative;
-  overflow: hidden;
+  overflow-x: hidden;
 }
 
 /* ===== SCREENS ===== */
@@ -516,7 +516,11 @@ select option { background: var(--surface2); }
   color: var(--muted);
 }
 .checkbox-inline input { accent-color: var(--accent); }
-.two-col-grid { grid-template-columns: 1fr 1fr; }
+.two-col-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
 .templates-content #templates-list { display: flex; flex-direction: column; gap: 12px; }
 .template-item {
   background: var(--surface); border: 1px solid var(--border);
