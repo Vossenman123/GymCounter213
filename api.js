@@ -268,6 +268,22 @@ async function _firebaseMutate(mutator) {
    ═══════════════════════════════════════════════════════════════════ */
 
 const GymApi = {
+  async getUserDb() {
+    if (!API_CONFIG.useBackend) return _normalizeDb(_loadLocal() || _emptyDb());
+    if (_isFirebaseBackend()) return _firebaseGetDb();
+    return _normalizeDb(_loadLocal() || _emptyDb());
+  },
+
+  async saveUserDb(db) {
+    const normalized = _normalizeDb(db);
+    if (!API_CONFIG.useBackend) {
+      _saveLocal(normalized);
+      return normalized;
+    }
+    if (_isFirebaseBackend()) return _firebaseSetDb(normalized);
+    _saveLocal(normalized);
+    return normalized;
+  },
 
   /* ── EXERCISES ──────────────────────────────────────────────────── */
 
@@ -609,7 +625,7 @@ const GymApi = {
   },
 
   async me() {
-    if (!API_CONFIG.useBackend || !API_CONFIG.token) return null;
+    if (!API_CONFIG.useBackend) return null;
 
     if (_isFirebaseBackend()) {
       const { user } = await _firebaseUser(false);
@@ -620,6 +636,7 @@ const GymApi = {
       return payload;
     }
 
+    if (!API_CONFIG.token) return null;
     return _http('GET', '/me');
   },
 

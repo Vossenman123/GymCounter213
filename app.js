@@ -81,7 +81,21 @@ function loadDB() {
   try { return JSON.parse(localStorage.getItem(STORE_KEY)) || defaultDB(); }
   catch(e) { return defaultDB(); }
 }
-function saveDB() { localStorage.setItem(STORE_KEY, JSON.stringify(DB)); }
+let cloudSyncDebounce = null;
+function scheduleCloudSync() {
+  if (cloudSyncDebounce) clearTimeout(cloudSyncDebounce);
+  cloudSyncDebounce = setTimeout(async () => {
+    if (!API_CONFIG.useBackend) return;
+    const authUser = GymApi.getAuthUser?.();
+    if (!authUser) return;
+    try { await GymApi.saveUserDb(DB); }
+    catch (_) {}
+  }, 350);
+}
+function saveDB() {
+  localStorage.setItem(STORE_KEY, JSON.stringify(DB));
+  scheduleCloudSync();
+}
 function defaultDB() {
   return {
     settings: {
@@ -2255,6 +2269,20 @@ function showAuthError(containerId, msg) {
   el.style.display = msg ? 'block' : 'none';
 }
 
+async function hydrateDbFromCloudForAccount() {
+  if (!API_CONFIG.useBackend) return;
+  const authUser = GymApi.getAuthUser?.();
+  if (!authUser) return;
+  try {
+    const remoteDb = await GymApi.getUserDb();
+    if (!remoteDb || typeof remoteDb !== 'object') return;
+    DB = { ...defaultDB(), ...remoteDb };
+    ensureDBDefaults();
+    mergeExerciseDefaults();
+    saveDB();
+  } catch (_) {}
+}
+
 // Password visibility toggles
 document.querySelectorAll('.pw-toggle').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -2362,8 +2390,9 @@ document.getElementById('btn-logout')?.addEventListener('click', async () => {
 });
 
 /** Called once auth is confirmed (token found or offline chosen). Shows the app. */
-function startApp() {
+async function startApp() {
   document.getElementById('bottom-nav').style.display = '';
+  await hydrateDbFromCloudForAccount();
   applyAppearanceSettings();
   applyFocusMode();
   updateConnectivityIndicators();
