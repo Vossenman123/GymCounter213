@@ -2276,7 +2276,7 @@ async function hydrateDbFromCloudForAccount() {
   try {
     const remoteDb = await GymApi.getUserDb();
     if (!remoteDb || typeof remoteDb !== 'object') return;
-    DB = { ...defaultDB(), ...remoteDb };
+    DB = remoteDb;
     ensureDBDefaults();
     mergeExerciseDefaults();
     saveDB();
