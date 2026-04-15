@@ -2321,6 +2321,27 @@ document.getElementById('login-form')?.addEventListener('submit', async (e) => {
   }
 });
 
+document.getElementById('btn-google-login')?.addEventListener('click', async () => {
+  showAuthError('auth-error', '');
+  const btn = document.getElementById('btn-google-login');
+  btn.disabled = true;
+  btn.textContent = 'Signing in with Google…';
+  try {
+    const res = await GymApi.loginWithGoogle();
+    if (res?.user) {
+      DB.settings.username = res.user.name || 'Athlete';
+      DB.settings.userId = String(res.user.id || '');
+      saveDB();
+      startApp();
+    }
+  } catch (err) {
+    showAuthError('auth-error', err.message || 'Google sign-in failed. Please try again.');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Continue with Google';
+  }
+});
+
 // Register form
 let _regUnit = 'kg';
 document.getElementById('reg-unit-kg')?.addEventListener('click', () => {
@@ -2369,12 +2390,6 @@ document.getElementById('register-form')?.addEventListener('submit', async (e) =
 document.getElementById('btn-goto-register')?.addEventListener('click', () => showAuthScreen('screen-register'));
 document.getElementById('btn-goto-login')?.addEventListener('click',    () => showAuthScreen('screen-login'));
 
-// Offline mode (skip auth)
-document.getElementById('btn-offline-mode')?.addEventListener('click', () => {
-  API_CONFIG.useBackend = false;
-  startApp();
-});
-
 // Logout (in settings)
 document.getElementById('btn-logout')?.addEventListener('click', async () => {
   openConfirmDialog({
@@ -2404,6 +2419,11 @@ window.addEventListener('offline', () => updateConnectivityIndicators());
 
 /* ── BOOT ───────────────────────────────────────────────────────────── */
 document.addEventListener('DOMContentLoaded', () => {
+  API_CONFIG.provider = 'firebase';
+  API_CONFIG.useBackend = true;
+  localStorage.setItem('gymlog_api_provider', 'firebase');
+  localStorage.setItem('gymlog_api_use_backend', '1');
+
   // If a backend URL is configured and we have a stored token, go straight to the app.
   // Otherwise show the login screen (if backend configured) or go directly offline.
   const isFirebaseBackend = API_CONFIG.useBackend && API_CONFIG.provider === 'firebase';
@@ -2418,14 +2438,9 @@ document.addEventListener('DOMContentLoaded', () => {
         showAuthScreen('screen-login');
       }
     }).catch(() => {
-      // Network down but token present – start in degraded offline mode
-      startApp();
+      showAuthScreen('screen-login');
     });
-  } else if (API_CONFIG.useBackend && !API_CONFIG.token) {
-    // Backend configured but not logged in
-    showAuthScreen('screen-login');
   } else {
-    // Fully offline mode
-    startApp();
+    showAuthScreen('screen-login');
   }
 });

@@ -606,6 +606,28 @@ const GymApi = {
     return res;
   },
 
+  async loginWithGoogle() {
+    if (!API_CONFIG.useBackend) API_CONFIG.useBackend = true;
+    API_CONFIG.provider = 'firebase';
+    _persistApiConfig();
+    if (!_isFirebaseBackend()) throw new Error('Google sign-in requires Firebase backend.');
+
+    const ctx = await _firebaseCtx();
+    const provider = new ctx.GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: 'select_account' });
+    const cred = await ctx.signInWithPopup(ctx.auth, provider);
+    const token = await cred.user.getIdToken();
+    const user = {
+      id: cred.user.uid,
+      name: cred.user.displayName || cred.user.email || 'Athlete',
+      email: cred.user.email || '',
+    };
+    _saveFirebaseSession(token, user);
+    await _firebaseGetDb();
+    _persistApiConfig();
+    return { user, token };
+  },
+
   async logout() {
     if (!API_CONFIG.useBackend) return;
 
