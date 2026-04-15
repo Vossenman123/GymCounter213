@@ -142,6 +142,13 @@ ensureDBDefaults();
 mergeExerciseDefaults(); // ensure existing saved exercises have desc/type
 
 function ensureDBDefaults() {
+  if (!DB || typeof DB !== 'object') DB = defaultDB();
+  if (!Array.isArray(DB.exercises)) DB.exercises = JSON.parse(JSON.stringify(BUILT_IN_EXERCISES));
+  if (!Array.isArray(DB.templates)) DB.templates = [];
+  if (!Array.isArray(DB.workouts)) DB.workouts = [];
+  if (!Array.isArray(DB.friends)) DB.friends = [];
+  if (!DB.prs || typeof DB.prs !== 'object' || Array.isArray(DB.prs)) DB.prs = {};
+  if (typeof DB.onboarded !== 'boolean') DB.onboarded = false;
   if (!DB.settings) DB.settings = {};
   if (!['kg','lb'].includes(DB.settings.unit)) DB.settings.unit = 'kg';
   if (typeof DB.settings.username !== 'string') DB.settings.username = '';
@@ -234,22 +241,30 @@ function applyFocusMode() {
 }
 
 function showScreen(id, noNav = false) {
-  screens.forEach(s => s.classList.toggle('active', s.id === id));
-  currentScreen = id;
-  const hideNav = noNav || ['screen-onboarding','screen-active-workout'].includes(id);
+  const screenExists = Array.from(screens).some(s => s.id === id);
+  const safeId = screenExists ? id : 'screen-home';
+  screens.forEach(s => s.classList.toggle('active', s.id === safeId));
+  currentScreen = safeId;
+  const hideNav = noNav || ['screen-onboarding','screen-active-workout'].includes(safeId);
   nav.classList.toggle('hidden', hideNav);
-  navBtns.forEach(b => b.classList.toggle('active', b.dataset.screen === id));
+  navBtns.forEach(b => b.classList.toggle('active', b.dataset.screen === safeId));
   window.scrollTo(0, 0);
 }
 
 function openMainScreen(id) {
-  const target = id === 'screen-friends' && DB.settings.focusMode === 'on' ? 'screen-home' : id;
-  if (target === 'screen-home') renderHome();
-  if (target === 'screen-templates') renderTemplates();
-  if (target === 'screen-friends') renderFriends();
-  if (target === 'screen-achievements') renderAchievements();
-  if (target === 'screen-settings') renderSettings();
-  showScreen(target);
+  const normalized = normalizeStartScreen(id);
+  const target = normalized === 'screen-friends' && DB.settings.focusMode === 'on' ? 'screen-home' : normalized;
+  try {
+    if (target === 'screen-home') renderHome();
+    if (target === 'screen-templates') renderTemplates();
+    if (target === 'screen-friends') renderFriends();
+    if (target === 'screen-achievements') renderAchievements();
+    if (target === 'screen-settings') renderSettings();
+    showScreen(target);
+  } catch (_) {
+    renderHome();
+    showScreen('screen-home');
+  }
 }
 
 navBtns.forEach(b => b.addEventListener('click', () => {
