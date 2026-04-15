@@ -90,7 +90,7 @@ function _loadApiConfig() {
   if (storedFirebaseCfg) {
     try {
       const parsed = JSON.parse(storedFirebaseCfg);
-      if (parsed && typeof parsed === 'object') {
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
         API_CONFIG.firebase = { ...API_CONFIG.firebase, ...parsed };
       }
     } catch (_) {}
